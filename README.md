@@ -93,7 +93,27 @@ display(Image("artifacts/success_rate_by_condition.png"))
 
 Paste the output of this cell back to Codex.
 
-### Optional Cell 9: Push The Report Back To GitHub
+### Optional Cell 9: Render The Robot Arm
+
+```python
+!python scripts/07_render_rollout.py --out artifacts/reacher_policy_rollout.gif
+```
+
+Display it:
+
+```python
+from IPython.display import Image, display
+display(Image("artifacts/reacher_policy_rollout.gif"))
+```
+
+Render a failure-ish latency case:
+
+```python
+!python scripts/07_render_rollout.py --latency-steps 2 --out artifacts/reacher_latency_rollout.gif
+display(Image("artifacts/reacher_latency_rollout.gif"))
+```
+
+### Optional Cell 10: Push The Report Back To GitHub
 
 This lets Codex pull the report from GitHub and inspect it.
 
@@ -163,5 +183,6 @@ Good discussion question:
 - `scripts/04_plot_results.py`: create result plots
 - `scripts/05_make_report.py`: print a compact report for sharing/debugging
 - `scripts/06_push_report.py`: push report artifacts to the `colab-report` branch
+- `scripts/07_render_rollout.py`: render the learned policy as a GIF
 - `src/reacher_bc/core.py`: shared environment, expert, and policy code
 - `requirements.txt`: Python package list
