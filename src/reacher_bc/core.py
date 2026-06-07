@@ -36,37 +36,51 @@ def make_env(seed: int, damping_scale: float = 1.0, mass_scale: float = 1.0):
     return env
 
 
-def expert_action(env, kp: float = 12.0, kd: float = 1.2) -> np.ndarray:
-    """Simple Jacobian-transpose controller used to generate demonstrations.
+def _wrap_angle(angle: np.ndarray) -> np.ndarray:
+    return (angle + np.pi) % (2 * np.pi) - np.pi
+
+
+def expert_action(env, kp: float = 18.0, kd: float = 1.6) -> np.ndarray:
+    """Simple inverse-kinematics PD controller used for demonstrations.
 
     Gymnasium Reacher-v5 exposes a compact 10D observation:
     [cos(q0), cos(q1), sin(q0), sin(q1), target_x, target_y, qvel0, qvel1,
     fingertip_minus_target_x, fingertip_minus_target_y].
 
-    We use that observation instead of MuJoCo site names, which changed across
-    environment versions.
+    We solve a tiny 2-link planar inverse-kinematics problem to pick desired
+    joint angles, then use joint-space PD control. This is intentionally simple:
+    it gives behavior cloning a decent teacher without requiring RL training.
     """
     obs = env.unwrapped._get_obs()
     q0 = np.arctan2(obs[2], obs[0])
     q1 = np.arctan2(obs[3], obs[1])
     qvel = obs[6:8]
+    target = obs[4:6]
 
-    # Reacher's default links are 0.1m each. The Jacobian maps joint velocity to
-    # fingertip velocity for a planar 2-link arm.
     l1, l2 = 0.1, 0.1
-    s0, c0 = np.sin(q0), np.cos(q0)
-    s01, c01 = np.sin(q0 + q1), np.cos(q0 + q1)
-    jac = np.array(
-        [
-            [-l1 * s0 - l2 * s01, -l2 * s01],
-            [l1 * c0 + l2 * c01, l2 * c01],
-        ],
-        dtype=np.float32,
-    )
+    radius = np.linalg.norm(target)
+    max_radius = l1 + l2 - 1e-4
+    if radius > max_radius:
+        target = target * (max_radius / radius)
+        radius = max_radius
 
-    # Observation stores fingertip - target, so target - fingertip is negative.
-    err = -obs[-2:]
-    torque = kp * jac.T @ err - kd * qvel
+    cos_q1 = (radius**2 - l1**2 - l2**2) / (2 * l1 * l2)
+    cos_q1 = np.clip(cos_q1, -1.0, 1.0)
+    q1_options = np.array([np.arccos(cos_q1), -np.arccos(cos_q1)])
+    q0_options = []
+    for q1_des in q1_options:
+        q0_des = np.arctan2(target[1], target[0]) - np.arctan2(
+            l2 * np.sin(q1_des), l1 + l2 * np.cos(q1_des)
+        )
+        q0_options.append(q0_des)
+
+    candidates = np.stack([q0_options, q1_options], axis=1)
+    current = np.array([q0, q1])
+    errors = _wrap_angle(candidates - current)
+    best = candidates[np.argmin(np.linalg.norm(errors, axis=1))]
+
+    joint_error = _wrap_angle(best - current)
+    torque = kp * joint_error - kd * qvel
     return np.clip(torque, env.action_space.low, env.action_space.high).astype(np.float32)
 
 
