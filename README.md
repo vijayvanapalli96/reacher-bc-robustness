@@ -93,6 +93,28 @@ display(Image("artifacts/success_rate_by_condition.png"))
 
 Paste the output of this cell back to Codex.
 
+### Optional Cell 9: Push The Report Back To GitHub
+
+This lets Codex pull the report from GitHub and inspect it.
+
+Create a fine-grained GitHub token with write access to this repo, then run:
+
+```python
+from getpass import getpass
+import os
+
+os.environ["GITHUB_TOKEN"] = getpass("GitHub token: ")
+```
+
+Then run:
+
+```python
+!python scripts/06_push_report.py
+```
+
+This pushes only logs, CSV results, and plots to a branch named `colab-report`.
+It does not push the large demo/model files.
+
 ## Run The Original Single Notebook
 
 You can also upload `reacher_bc_robustness_colab.ipynb` to Google Colab and run it from top to bottom. The script flow above is better for reporting progress cell by cell.
@@ -140,5 +162,6 @@ Good discussion question:
 - `scripts/03_evaluate_robustness.py`: evaluate clean and perturbed conditions
 - `scripts/04_plot_results.py`: create result plots
 - `scripts/05_make_report.py`: print a compact report for sharing/debugging
+- `scripts/06_push_report.py`: push report artifacts to the `colab-report` branch
 - `src/reacher_bc/core.py`: shared environment, expert, and policy code
 - `requirements.txt`: Python package list
