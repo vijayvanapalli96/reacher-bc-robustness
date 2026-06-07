@@ -178,6 +178,7 @@ Good discussion question:
 
 - `reacher_bc_robustness_colab.ipynb`: main Colab notebook
 - `unitree_g1_mujoco_colab.ipynb`: Colab notebook for Unitree G1 pretrained MuJoCo playback
+- `unitree_g1_mujoco_train_colab.ipynb`: Colab notebook for a prototype G1 MuJoCo PPO trainer
 - `scripts/01_collect_demos.py`: collect expert demonstrations
 - `scripts/02_train_bc.py`: train the behavior cloning policy
 - `scripts/03_evaluate_robustness.py`: evaluate clean and perturbed conditions
@@ -186,5 +187,6 @@ Good discussion question:
 - `scripts/06_push_report.py`: push report artifacts to the `colab-report` branch
 - `scripts/07_render_rollout.py`: render the learned policy as a GIF
 - `scripts/unitree_g1_mujoco_render.py`: render Unitree's pretrained G1 MuJoCo policy
+- `scripts/unitree_g1_mujoco_ppo_train.py`: train a prototype G1 PPO policy in MuJoCo
 - `src/reacher_bc/core.py`: shared environment, expert, and policy code
 - `requirements.txt`: Python package list
