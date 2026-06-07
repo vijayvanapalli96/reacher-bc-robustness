@@ -33,7 +33,8 @@ Open a fresh Google Colab notebook and run these as separate cells.
 ### Cell 3: Collect Expert Demonstrations
 
 ```python
-!python scripts/01_collect_demos.py --episodes 250
+!mkdir -p artifacts
+!python scripts/01_collect_demos.py --episodes 250 2>&1 | tee artifacts/01_collect_demos.log
 ```
 
 This creates:
@@ -43,7 +44,7 @@ This creates:
 ### Cell 4: Train Behavior Cloning
 
 ```python
-!python scripts/02_train_bc.py --epochs 35
+!python scripts/02_train_bc.py --epochs 35 2>&1 | tee artifacts/02_train_bc.log
 ```
 
 This creates:
@@ -54,7 +55,7 @@ This creates:
 ### Cell 5: Evaluate Robustness
 
 ```python
-!python scripts/03_evaluate_robustness.py --episodes 60
+!python scripts/03_evaluate_robustness.py --episodes 60 2>&1 | tee artifacts/03_evaluate_robustness.log
 ```
 
 This creates:
@@ -64,7 +65,7 @@ This creates:
 ### Cell 6: Plot Results
 
 ```python
-!python scripts/04_plot_results.py
+!python scripts/04_plot_results.py 2>&1 | tee artifacts/04_plot_results.log
 ```
 
 This creates:
@@ -83,6 +84,14 @@ display(Image("artifacts/training_loss.png"))
 display(Image("artifacts/return_by_condition.png"))
 display(Image("artifacts/success_rate_by_condition.png"))
 ```
+
+### Cell 8: Make A Pasteable Report
+
+```python
+!python scripts/05_make_report.py
+```
+
+Paste the output of this cell back to Codex.
 
 ## Run The Original Single Notebook
 
@@ -130,5 +139,6 @@ Good discussion question:
 - `scripts/02_train_bc.py`: train the behavior cloning policy
 - `scripts/03_evaluate_robustness.py`: evaluate clean and perturbed conditions
 - `scripts/04_plot_results.py`: create result plots
+- `scripts/05_make_report.py`: print a compact report for sharing/debugging
 - `src/reacher_bc/core.py`: shared environment, expert, and policy code
 - `requirements.txt`: Python package list
