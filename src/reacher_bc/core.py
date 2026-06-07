@@ -5,7 +5,6 @@ from dataclasses import dataclass
 from pathlib import Path
 
 import gymnasium as gym
-import mujoco
 import numpy as np
 import torch
 import torch.nn as nn
@@ -37,26 +36,37 @@ def make_env(seed: int, damping_scale: float = 1.0, mass_scale: float = 1.0):
     return env
 
 
-def _site_id(model, name: str) -> int:
-    site = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_SITE, name)
-    if site < 0:
-        raise RuntimeError(f"MuJoCo site not found: {name}")
-    return site
-
-
 def expert_action(env, kp: float = 12.0, kd: float = 1.2) -> np.ndarray:
-    """Simple Jacobian-transpose controller used to generate demonstrations."""
-    unwrapped = env.unwrapped
-    model, data = unwrapped.model, unwrapped.data
-    fingertip = _site_id(model, "fingertip")
-    target = _site_id(model, "target")
+    """Simple Jacobian-transpose controller used to generate demonstrations.
 
-    err = data.site_xpos[target] - data.site_xpos[fingertip]
-    jacp = np.zeros((3, model.nv))
-    jacr = np.zeros((3, model.nv))
-    mujoco.mj_jacSite(model, data, jacp, jacr, fingertip)
+    Gymnasium Reacher-v5 exposes a compact 10D observation:
+    [cos(q0), cos(q1), sin(q0), sin(q1), target_x, target_y, qvel0, qvel1,
+    fingertip_minus_target_x, fingertip_minus_target_y].
 
-    torque = kp * jacp[:, :2].T @ err - kd * data.qvel[:2]
+    We use that observation instead of MuJoCo site names, which changed across
+    environment versions.
+    """
+    obs = env.unwrapped._get_obs()
+    q0 = np.arctan2(obs[2], obs[0])
+    q1 = np.arctan2(obs[3], obs[1])
+    qvel = obs[6:8]
+
+    # Reacher's default links are 0.1m each. The Jacobian maps joint velocity to
+    # fingertip velocity for a planar 2-link arm.
+    l1, l2 = 0.1, 0.1
+    s0, c0 = np.sin(q0), np.cos(q0)
+    s01, c01 = np.sin(q0 + q1), np.cos(q0 + q1)
+    jac = np.array(
+        [
+            [-l1 * s0 - l2 * s01, -l2 * s01],
+            [l1 * c0 + l2 * c01, l2 * c01],
+        ],
+        dtype=np.float32,
+    )
+
+    # Observation stores fingertip - target, so target - fingertip is negative.
+    err = -obs[-2:]
+    torque = kp * jac.T @ err - kd * qvel
     return np.clip(torque, env.action_space.low, env.action_space.high).astype(np.float32)
 
 
@@ -88,12 +98,11 @@ def policy_action(policy, obs, obs_mean, obs_std, device: str) -> np.ndarray:
 
 
 def final_distance_from_obs(obs: np.ndarray) -> float:
-    # Reacher observations end with fingertip-target x/y/z distance.
-    return float(np.linalg.norm(obs[-3:]))
+    # Reacher-v5 observations end with fingertip-target x/y distance.
+    return float(np.linalg.norm(obs[-2:]))
 
 
 def ensure_dir(path: str | Path) -> Path:
     path = Path(path)
     path.mkdir(parents=True, exist_ok=True)
     return path
-
