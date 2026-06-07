@@ -77,11 +77,11 @@ def main():
         raise SystemExit("No report artifacts found. Run the experiment first.")
 
     run(["git", "add", *existing_files])
-    status = run(["git", "status", "--short"], capture=True).stdout.strip()
-    if status:
+    has_staged_changes = run(["git", "diff", "--cached", "--quiet"], check=False).returncode != 0
+    if has_staged_changes:
         run(["git", "commit", "-m", args.message])
     else:
-        print("No report changes to commit.")
+        print("No staged report changes to commit. Pushing current branch state.")
 
     run(["git", "push", "--force", authed_remote, f"HEAD:{args.branch}"])
     print(f"Pushed report branch: https://github.com/{slug}/tree/{args.branch}")
@@ -90,4 +90,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
