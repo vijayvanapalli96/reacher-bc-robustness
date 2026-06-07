@@ -13,12 +13,80 @@ The point is not to claim state-of-the-art RL. The point is to show a practical 
 
 > Clean simulation performance is not enough. Learned policies need to be tested under the kinds of imperfections that show up on real robots.
 
-## Run In Colab
+## Run In Colab With Scripts
 
-1. Upload `reacher_bc_robustness_colab.ipynb` to Google Colab.
-2. In Colab, choose `Runtime > Change runtime type`.
-3. Use `T4 GPU` if available. CPU is also fine for this notebook.
-4. Run all cells from top to bottom.
+Open a fresh Google Colab notebook and run these as separate cells.
+
+### Cell 1: Clone The Repo
+
+```python
+!git clone https://github.com/vijayvanapalli96/reacher-bc-robustness.git
+%cd reacher-bc-robustness
+```
+
+### Cell 2: Install Dependencies
+
+```python
+!pip -q install -r requirements.txt
+```
+
+### Cell 3: Collect Expert Demonstrations
+
+```python
+!python scripts/01_collect_demos.py --episodes 250
+```
+
+This creates:
+
+- `artifacts/demos.npz`
+
+### Cell 4: Train Behavior Cloning
+
+```python
+!python scripts/02_train_bc.py --epochs 35
+```
+
+This creates:
+
+- `artifacts/bc_policy.pt`
+- `artifacts/training_loss.png`
+
+### Cell 5: Evaluate Robustness
+
+```python
+!python scripts/03_evaluate_robustness.py --episodes 60
+```
+
+This creates:
+
+- `artifacts/eval_results.csv`
+
+### Cell 6: Plot Results
+
+```python
+!python scripts/04_plot_results.py
+```
+
+This creates:
+
+- `artifacts/return_by_condition.png`
+- `artifacts/success_rate_by_condition.png`
+
+### Cell 7: Show Results In Colab
+
+```python
+import pandas as pd
+from IPython.display import display, Image
+
+display(pd.read_csv("artifacts/eval_results.csv"))
+display(Image("artifacts/training_loss.png"))
+display(Image("artifacts/return_by_condition.png"))
+display(Image("artifacts/success_rate_by_condition.png"))
+```
+
+## Run The Original Single Notebook
+
+You can also upload `reacher_bc_robustness_colab.ipynb` to Google Colab and run it from top to bottom. The script flow above is better for reporting progress cell by cell.
 
 ## GPU Recommendation
 
@@ -58,5 +126,9 @@ Good discussion question:
 ## Files
 
 - `reacher_bc_robustness_colab.ipynb`: main Colab notebook
+- `scripts/01_collect_demos.py`: collect expert demonstrations
+- `scripts/02_train_bc.py`: train the behavior cloning policy
+- `scripts/03_evaluate_robustness.py`: evaluate clean and perturbed conditions
+- `scripts/04_plot_results.py`: create result plots
+- `src/reacher_bc/core.py`: shared environment, expert, and policy code
 - `requirements.txt`: Python package list
-

@@ -1,6 +1,6 @@
+-e .
 gymnasium[mujoco]
 torch
 pandas
 matplotlib
 tqdm
-
