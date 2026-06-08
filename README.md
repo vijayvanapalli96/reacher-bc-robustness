@@ -179,6 +179,7 @@ Good discussion question:
 - `reacher_bc_robustness_colab.ipynb`: main Colab notebook
 - `unitree_g1_mujoco_colab.ipynb`: Colab notebook for Unitree G1 pretrained MuJoCo playback
 - `unitree_g1_mujoco_train_colab.ipynb`: Colab notebook for a prototype G1 MuJoCo PPO trainer
+- `unitree_g1_mujoco_train_v2_colab.ipynb`: clean current G1 MuJoCo PPO training notebook
 - `scripts/01_collect_demos.py`: collect expert demonstrations
 - `scripts/02_train_bc.py`: train the behavior cloning policy
 - `scripts/03_evaluate_robustness.py`: evaluate clean and perturbed conditions
