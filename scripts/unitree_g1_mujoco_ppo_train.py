@@ -1,8 +1,5 @@
 import argparse
-import os
 from pathlib import Path
-
-os.environ.setdefault("MUJOCO_GL", "egl")
 
 import gymnasium as gym
 import imageio.v2 as imageio
@@ -206,6 +203,11 @@ class UnitreeG1MujocoEnv(gym.Env):
 
 
 def render_policy(model_path, unitree_root, out_path, duration=10.0):
+    # Rendering in Colab needs EGL, but training/check-env does not. Setting this
+    # only here avoids native MuJoCo/OpenGL crashes during headless training.
+    import os
+
+    os.environ.setdefault("MUJOCO_GL", "egl")
     env = UnitreeG1MujocoEnv(unitree_root=unitree_root, episode_seconds=duration)
     model = PPO.load(model_path, env=None, device="cpu")
     obs, _ = env.reset(seed=123)
@@ -232,13 +234,27 @@ def main():
     parser.add_argument("--episode-seconds", type=float, default=6.0)
     parser.add_argument("--out-dir", type=str, default="artifacts/g1_mujoco_ppo")
     parser.add_argument("--check-env", action="store_true")
+    parser.add_argument("--no-render", action="store_true")
     args = parser.parse_args()
 
     out_dir = Path(args.out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
 
     if args.check_env:
-        check_env(UnitreeG1MujocoEnv(unitree_root=args.unitree_root, episode_seconds=2.0))
+        env = UnitreeG1MujocoEnv(unitree_root=args.unitree_root, episode_seconds=2.0)
+        check_env(env)
+        obs, _ = env.reset(seed=123)
+        action = env.action_space.sample()
+        next_obs, reward, terminated, truncated, info = env.step(action)
+        env.close()
+        print("check_env: passed")
+        print(f"obs_shape: {obs.shape}")
+        print(f"next_obs_shape: {next_obs.shape}")
+        print(f"sample_reward: {reward:.3f}")
+        print(f"terminated: {terminated}")
+        print(f"truncated: {truncated}")
+        if args.timesteps <= 1:
+            return
 
     def make_env():
         return UnitreeG1MujocoEnv(
@@ -271,9 +287,9 @@ def main():
     final_model = out_dir / "ppo_g1_mujoco_final.zip"
     model.save(final_model)
     print(f"saved_model: {final_model}")
-    render_policy(final_model, args.unitree_root, out_dir / "ppo_g1_mujoco_rollout.gif")
+    if not args.no_render:
+        render_policy(final_model, args.unitree_root, out_dir / "ppo_g1_mujoco_rollout.gif")
 
 
 if __name__ == "__main__":
     main()
-
