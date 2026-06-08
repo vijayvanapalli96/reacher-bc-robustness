@@ -117,7 +117,8 @@ class UnitreeG1MujocoEnv(gym.Env):
     def _is_fallen(self):
         height = self.data.qpos[2]
         gravity = get_gravity_orientation(self.data.qpos[3:7])
-        return bool(height < 0.45 or gravity[2] < 0.25)
+        upright = -gravity[2]
+        return bool(height < 0.45 or upright < 0.25)
 
     def _reward(self, action):
         forward_vel = self.data.qvel[0]
@@ -125,19 +126,20 @@ class UnitreeG1MujocoEnv(gym.Env):
         yaw_rate = self.data.qvel[5]
         height = self.data.qpos[2]
         gravity = get_gravity_orientation(self.data.qpos[3:7])
+        upright = -gravity[2]
 
         target_vx, target_vy, target_yaw = self.cmd
         tracking = np.exp(-2.0 * (forward_vel - target_vx) ** 2)
         lateral_penalty = lateral_vel**2
         yaw_penalty = (yaw_rate - target_yaw) ** 2
-        upright = max(0.0, gravity[2])
+        upright_reward = max(0.0, upright)
         height_penalty = (height - 0.78) ** 2
         action_penalty = float(np.mean(np.square(action)))
         joint_vel_penalty = float(np.mean(np.square(self.data.qvel[6:])))
 
         reward = (
             1.0 * tracking
-            + 0.8 * upright
+            + 0.8 * upright_reward
             + 0.2
             - 0.5 * lateral_penalty
             - 0.2 * yaw_penalty
@@ -192,7 +194,7 @@ class UnitreeG1MujocoEnv(gym.Env):
 
     def render(self):
         if self.renderer is None:
-            self.renderer = mujoco.Renderer(self.model, height=540, width=960)
+            self.renderer = mujoco.Renderer(self.model, height=360, width=640)
         self.renderer.update_scene(self.data)
         return self.renderer.render()
 
@@ -244,12 +246,17 @@ def main():
         env = UnitreeG1MujocoEnv(unitree_root=args.unitree_root, episode_seconds=2.0)
         check_env(env)
         obs, _ = env.reset(seed=123)
+        initial_height = float(env.data.qpos[2])
+        initial_gravity = get_gravity_orientation(env.data.qpos[3:7])
+        initial_upright = -initial_gravity[2]
         action = env.action_space.sample()
         next_obs, reward, terminated, truncated, info = env.step(action)
         env.close()
         print("check_env: passed")
         print(f"obs_shape: {obs.shape}")
         print(f"next_obs_shape: {next_obs.shape}")
+        print(f"initial_height: {initial_height:.3f}")
+        print(f"initial_upright_score: {initial_upright:.3f}")
         print(f"sample_reward: {reward:.3f}")
         print(f"terminated: {terminated}")
         print(f"truncated: {truncated}")
